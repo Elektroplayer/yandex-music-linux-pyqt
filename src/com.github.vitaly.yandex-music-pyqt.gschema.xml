@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema path="/com/github/vitaly/yandex-music-pyqt/" id="com.github.vitaly.yandex-music-pyqt">
+    <key type="s" name="token">
+      <default>""</default>
+      <summary>TOKEN</summary>
+      <description>System variable TOKEN</description>
+    </key>
+  </schema>
+</schemalist>

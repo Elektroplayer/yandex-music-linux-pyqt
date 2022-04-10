@@ -1,19 +1,57 @@
 # Импорт библиотек и файлов
-import datetime
-from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QImage, QCursor
 from designs.MainWindow import Ui_MainWindow
-from yandex_music import Client, GeneratedPlaylist
-from config import token
+from designs.LoginDialog import Ui_Dialog
+from yandex_music import Client
+from gi.repository import Gio
+import datetime
 import mpv
 import locale
 import sys
 import requests
 
+class LoginDialog(QtWidgets.QDialog, Ui_Dialog):
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+
+        self.loginbutton.clicked.connect(self.login)
+
+    def login(self):
+        login = self.loginInput.text()
+        password = self.passinput.text()
+
+        print(login, len(login))
+        print(password, len(password))
+
+        if len(login) == 0 or len(password) == 0:
+            self.label.setText('Поля не должны быть пустыми!')
+            return
+
+        link_post = "https://oauth.yandex.com/token"
+        header = {
+            "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
+        }
+
+        try:
+            request_post = f"grant_type=password&client_id=23cabbbdc6cd418abb4b39c32c41195d&client_secret=53bc75238f0c4d08a118e51fe9203300&username={login}&password={password}"
+            request_auth = requests.post(link_post, data=request_post, headers=header)
+            if request_auth.status_code == 200:
+                json_data = request_auth.json()
+                self.token = json_data.get('access_token')
+
+                if self.token != '':
+                    self.close()
+                else:
+                    self.label.setText('Произошла ошибка, попробуйте снова')
+            else:
+                self.label.setText('Не верный логин или пароль')
+        except requests.exceptions.ConnectionError:
+            self.label.setText('Не удалось отправить запрос')
 
 # Создание главного класса
-class Window(QMainWindow, Ui_MainWindow):
+class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
     # Инициализируем всё, что нужно
     def __init__(self, parent=None):
@@ -24,16 +62,19 @@ class Window(QMainWindow, Ui_MainWindow):
         self.setGeometry(300, 220, 1220, 650)
         self.setMinimumSize(QtCore.QSize(580, 400))
         self.setWindowTitle('Yandex.Music')
-        self.setWindowIcon(QIcon('images/logo.svg'))
+        self.setWindowIcon(QIcon('./src/images/logo.svg'))
 
-        # Скриваем правое меню
+        # Скрываем правое меню
         self.rightMenu.hide() 
 
         # Подключаем к кнопкам их функции
         self.startStopButton.clicked.connect(self.startTrack)
         self.rightMenu_Hide.clicked.connect(self.hideRightMenu)
 
-        # Инициализируем YMClient
+        # Запускаем функцию получения токена
+        token = self.getToken()
+
+        # Инициализируем YMClient с полученным токеном
         self.YMClient = Client(token).init() 
 
         # Создаём плэер mpv
@@ -48,9 +89,27 @@ class Window(QMainWindow, Ui_MainWindow):
         # Инициализируем плэйлисты пользователя. Пока что только сгененированные.
         self.playlistInit()
 
-    def playlistInit(self):
+    def getToken(self):
+        # Создаём схемы для сохранения токена
+        schema_source = Gio.SettingsSchemaSource.new_from_directory('./src/', Gio.SettingsSchemaSource.get_default(), False)
+        schema = schema_source.lookup('com.github.vitaly.yandex-music-pyqt', False)
+        self.settings = Gio.Settings.new_full(schema, None, None)
 
+        # Изымаем его
+        token = self.settings.get_string('token')
+
+        # Если токена нет
+        if token == '':
+            dlg = LoginDialog() # Запускаем диалог для его получения
+            dlg.exec()
+
+            self.settings.set_string('token', dlg.token) # Записываем в схему
+
+            #token = dlg.token 
         
+        return token or dlg.token # Возвращаем токен
+
+    def playlistInit(self):
         playlists  = self.YMClient.feed().generated_playlists # Получаем плэйлисты
         month      = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'] # Массив с месяцами в нужном падеже
 
@@ -219,9 +278,10 @@ class Window(QMainWindow, Ui_MainWindow):
                 self.mpvPlayer.cycle("pause")
             self.playingStatus = True
 
+
 # Запускаем класс и всё что к нему требуется
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     win = Window()
     win.show()
     sys.exit(app.exec())
