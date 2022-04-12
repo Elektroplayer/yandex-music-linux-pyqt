@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python src/index.py
+python3 src/index.py
