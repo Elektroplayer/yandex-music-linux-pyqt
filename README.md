@@ -1,7 +1,15 @@
 # yandex-music-linux-pyqt
 Клиент для Яндекс.Музыки на Python.
 
-Использует неофициальную [библиотеку yandex_music](https://github.com/MarshalX/yandex-music-api)
+Использует неофициальную библиотеку yandex_music
+
+# Общая информация:
+
+Язык: Python 3
+
+Библиотеки: PyQt5, [yandex_music](https://github.com/MarshalX/yandex-music-api)
+
+Telegram: [жмяк!](https://t.me/+13m18hENHa9lYTcy)
 
 # Как начать?
 

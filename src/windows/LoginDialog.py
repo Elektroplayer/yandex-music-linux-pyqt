@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 
-from src.windows.models.LoginDialogModel import Ui_Dialog
+from windows.models.LoginDialogModel import Ui_Dialog
 
 
 class LoginDialog(QtWidgets.QDialog, Ui_Dialog):

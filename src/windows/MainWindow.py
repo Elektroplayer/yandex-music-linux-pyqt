@@ -1,14 +1,15 @@
 import datetime
 import requests
+import threading
 
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QImage, QCursor
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist
 from gi.repository import Gio
 from yandex_music import Client
 
-from src.windows.LoginDialog import LoginDialog
-from src.windows.models.MainWindowModel import Ui_MainWindow
+from windows.LoginDialog import LoginDialog
+from windows.models.MainWindowModel import Ui_MainWindow
 
 
 # Переводит миллисекунды в минуты и секунды
@@ -63,8 +64,13 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.player.durationChanged.connect(self.duration_changed)
         self.player.stateChanged.connect(self.player_state_changed)
 
+        # Настройка плейлиста
+        self.playlist = None  # QMediaPlaylist(self.player)
+        # self.player.setPlaylist(self.playlist)
+
         # Пока что бесполезные переменные
         self.track = "10994777:1193829"
+
         # self.trackLink = ""
         # self.playingStatus = False
 
@@ -109,6 +115,32 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.player.setMedia(content)
         self.player.play()
+
+    def play_playlist(self, playlist, index=0):
+        # playlist.data.tracks[0].id
+
+        # qtplaylist = QMediaPlaylist(self.player)
+        # url =
+        # self.playlist.addMedia(QMediaContent(QtCore.QUrl(self.YMClient.tracks_download_info(playlist.data.tracks[0].id, True)[0].direct_link)))
+        # self.playlist.addMedia(QMediaContent(QtCore.QUrl(self.YMClient.tracks_download_info(playlist.data.tracks[1].id, True)[0].direct_link)))
+
+        # self.player.setPlaylist(qtplaylist)
+        # self.player.playlist().setCurrentIndex(0)
+
+        self.playlist = QMediaPlaylist(self.player)
+
+        # thread = threading.Thread(target=self.add_track_to_qtplaylist, args=(playlist))
+        # thread.start()
+
+        for track in playlist.data.tracks:
+            self.playlist.addMedia(QMediaContent(QtCore.QUrl(self.YMClient.tracks_download_info(track.id, True)[0].direct_link)))
+
+        self.playlist.setCurrentIndex(index)
+        self.player.play()
+
+    # def add_track_to_qtplaylist(self, playlist):
+    #     print(1)
+
 
     # Получает токен
     def get_token(self):
@@ -224,25 +256,24 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     self.clear_layout(child.layout())
 
     # Декоратор клика на музыку внутри плейлиста
-    def music_in_playlist_clicked_decorator(self, track):
+    def music_in_playlist_clicked_decorator(self, track, playlist):
+        #self.current_playlist = playlist
 
         def out_func():
-            self.music_in_playlist_clicked(track)
+            self.music_in_playlist_clicked(track, playlist)
 
         return out_func
 
     # Сама функция клика на музыку внутри плейлиста
-    def music_in_playlist_clicked(self, track):
-        # track.og_image
-        print(track)
-
+    def music_in_playlist_clicked(self, track, playlist):
         image = QImage()
         image.loadFromData(requests.get('http://' + track.og_image.replace('%%', '50x50')).content)
 
         self.MusicName.setText(track.title)
         self.MusicAuthor.setText(track.artists[0].name)
         self.ImageMusic.setPixmap(QPixmap(image))
-        self.play_audio_file(track.id)
+        #self.play_audio_file(track.id)
+        self.play_playlist(playlist)
 
     # Декоратор, цель которого только запомнить, с каким плейлистом устанавливалась функция
     def playlist_clicked_decorator(self, playlist):
@@ -283,7 +314,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             layout_track_play_button.setMaximumSize(QtCore.QSize(30, 30))
             layout_track_play_button.setObjectName(str(track.id) + "_PlayButton")
             layout_track_play_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MediaPlay))
-            layout_track_play_button.clicked.connect(self.music_in_playlist_clicked_decorator(track))
+            layout_track_play_button.clicked.connect(self.music_in_playlist_clicked_decorator(track, playlist))
             layout_track.addWidget(layout_track_play_button)
             layout_track_track_author_name = QtWidgets.QLabel(self.scrollAreaWidgetContents_2)
             layout_track_track_author_name.setTextFormat(QtCore.Qt.MarkdownText)
