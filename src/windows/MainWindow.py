@@ -323,7 +323,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.player.play()
 
     def update_music_data(self, track, playlist):
-        """Обновляет информацию о треке в футере"""
+        """Обновляет информацию о треке в футере.
+        А так же обновляет информацию в переменных"""
 
         image = QImage()
         image.loadFromData(requests.get('http://' + track.og_image.replace('%%', '50x50')).content)
