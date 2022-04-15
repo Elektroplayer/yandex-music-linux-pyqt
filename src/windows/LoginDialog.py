@@ -1,4 +1,5 @@
 from PyQt5 import QtWidgets
+import requests
 
 from windows.models.LoginDialogModel import Ui_Dialog
 
